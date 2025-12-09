@@ -20,12 +20,12 @@ body,html{
     overflow:hidden;
 }
 
-/* ===== MATRIX BACKGROUND ===== */
+/* ===== CANVAS ===== */
 canvas{
     position:fixed;
     top:0; left:0;
     width:100%; height:100%;
-    z-index:-2;
+    pointer-events:none;
 }
 
 /* ===== RAINBOW BORDER ANIMATION ===== */
@@ -46,6 +46,8 @@ canvas{
     border:3px solid #ff00e0;
     border-radius:12px;
     animation:rainbowBorder 4s linear infinite;
+    position:relative;
+    z-index:1;
 }
 
 /* ===== TERMINAL LOG ===== */
@@ -74,11 +76,6 @@ input{
 input:focus{
     outline:none;
     box-shadow:0 0 30px #ff4bff;
-}
-
-/* FIX marker */
-input::before,input::after,input::marker{
-    content:"" !important;
 }
 
 /* ===== BUTTON ===== */
@@ -151,6 +148,7 @@ button:hover{
 </head>
 <body>
 
+<canvas id="goldCanvas"></canvas>
 <canvas id="matrixCanvas"></canvas>
 
 <div class="terminal">
@@ -168,32 +166,69 @@ button:hover{
 </div>
 
 <script>
-/* ===== MATRIX ===== */
+/* ===== GOLD $ FALL ===== */
+const goldCanvas = document.getElementById("goldCanvas");
+const gctx = goldCanvas.getContext("2d");
+
+function resizeGold() { goldCanvas.width = innerWidth; goldCanvas.height = innerHeight; }
+resizeGold();
+window.onresize = () => { resizeGold(); };
+
+const golds = [];
+for(let i=0;i<80;i++){
+    golds.push({
+        x:Math.random()*goldCanvas.width,
+        y:Math.random()*goldCanvas.height,
+        size:12+Math.random()*12,
+        speed:1+Math.random()*3,
+        alpha:0.3+Math.random()*0.7,
+        glow:Math.random()*0.5
+    });
+}
+
+function drawGold(){
+    gctx.clearRect(0,0,goldCanvas.width,goldCanvas.height);
+    golds.forEach(g=>{
+        const gradient = gctx.createRadialGradient(g.x,g.y,g.size/4,g.x,g.y,g.size);
+        gradient.addColorStop(0,"rgba(255,255,200,"+(g.alpha)+")");
+        gradient.addColorStop(1,"rgba(255,215,0,0)");
+        gctx.fillStyle = gradient;
+        gctx.shadowColor = "gold";
+        gctx.shadowBlur = 8;
+        gctx.font = `bold ${g.size}px monospace`;
+        gctx.fillText("$", g.x, g.y);
+        g.y += g.speed;
+        if(g.y > goldCanvas.height) g.y = 0;
+    });
+}
+setInterval(drawGold,40);
+
+/* ===== MATRIX BACKGROUND (OPTIONAL) ===== */
 const canvas=document.getElementById("matrixCanvas");
 const ctx=canvas.getContext("2d");
-
-function resize(){canvas.width=innerWidth;canvas.height=innerHeight;}
-resize(); onresize=resize;
+function resizeMatrix(){canvas.width=innerWidth; canvas.height=innerHeight;}
+resizeMatrix();
+window.onresize=()=>{resizeGold(); resizeMatrix();}
 
 const chars="01<>/=$#@*&%";
 const fs=14;
 let cols=Math.floor(canvas.width/fs);
 let drops=Array(cols).fill(1);
 
-function draw(){
-    ctx.fillStyle="rgba(0,0,0,0.08)";
+function drawMatrix(){
+    ctx.fillStyle="rgba(0,0,0,0.05)";
     ctx.fillRect(0,0,canvas.width,canvas.height);
     ctx.fillStyle="#ff00e0";
     ctx.font=fs+"px monospace";
 
     drops.forEach((y,i)=>{
-        const ch=chars[Math.random()*chars.length|0];
+        const ch=chars[Math.floor(Math.random()*chars.length)];
         ctx.fillText(ch,i*fs,y*fs);
         if(y*fs>canvas.height && Math.random()>0.95) drops[i]=0;
         drops[i]++;
     });
 }
-setInterval(draw,35);
+setInterval(drawMatrix,35);
 
 /* ===== AUTO TERMINAL LOG ===== */
 const logBox=document.getElementById("autoLog");
@@ -210,21 +245,10 @@ const logLines=[
 ];
 
 setInterval(()=>{
-    const line=logLines[Math.random()*logLines.length|0];
+    const line=logLines[Math.floor(Math.random()*logLines.length)];
     logBox.innerHTML+=line+"\n";
     logBox.scrollTop=logBox.scrollHeight;
-    playTyping();
 },800);
-
-/* ===== AUDIO ===== */
-function playTyping(){
-    const a=new Audio("data:audio/wav;base64,UklGRuQAAABXQVZFZm10IBAAAAABAAEAIlYAAB9AAACABAAZGF0YcQAAAD/////AP//AAD/f39/fwAAAP8AAP///wD///8AAP+AgICAgP8AAAD///8A");
-    a.volume=0.25; a.play();
-}
-function beepCyber(){
-    const a=new Audio("data:audio/wav;base64,UklGRsQBAABXQVZFZm10IBAAAAABAAEAIlYAAB9AAACABAAZGF0YYQBAACAgICAgP8AAP9/f39/f4CAgICAgID///8AAP8A////AP///wAAgn+Cf4J/gAAAAP8A");
-    a.volume=0.5; a.play();
-}
 
 /* ===== FORMAT RUPIAH ===== */
 function formatRupiah(e){
@@ -266,7 +290,6 @@ function executeTransfer(){
             clearInterval(load);
             bar.style.width="100%";
             setTimeout(()=>{
-                beepCyber();
                 result.style.display="block";
                 result.innerHTML="<span class='glitch'>❌ TRANSFER GAGAL — SALDO AKUN BARU KURANG DARI Rp 250.000</span>";
                 result.classList.add("shake");
@@ -278,4 +301,3 @@ function executeTransfer(){
 </script>
 </body>
 </html>
-
